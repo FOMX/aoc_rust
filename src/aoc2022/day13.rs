@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::Problem;
 use std::str::{Chars, FromStr};
 /// problem: https://adventofcode.com/2022/day/13
@@ -9,32 +11,29 @@ const P: Problem = Problem {
     name: "Distress Signal",
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Node {
-    ListNode(ListNode),
+    List(Vec<Node>),
     Val(usize),
 }
 
-#[derive(Debug, Clone)]
-pub struct ListNode {
-    pub children: Vec<Node>,
-}
-
-impl FromStr for ListNode {
+impl FromStr for Node {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> anyhow::Result<Self> {
-        ListNode::from_chars(&mut s.chars())
+        let cs = &mut s.chars();
+        cs.next(); // burn first [
+        Node::from_chars(cs)
     }
 }
-impl ListNode {
+impl Node {
     fn from_chars(chars: &mut Chars) -> anyhow::Result<Self> {
         // first char
         let mut children = Vec::new();
         while let Some(c) = chars.next() {
             match c {
                 ']' => break, // end of chars
-                '[' => children.push(Node::ListNode(ListNode::from_chars(chars)?)),
+                '[' => children.push(Node::from_chars(chars)?),
                 token if token.is_ascii_digit() => {
                     let mut v = String::from(token);
                     for ch in chars.take_while(|&tok| tok.is_digit(10)) {
@@ -46,59 +45,43 @@ impl ListNode {
                 _ => unreachable!(),
             }
         }
-        Ok(Self { children })
+        Ok(Node::List(children))
     }
 }
 
 #[derive(Debug)]
 struct Pair {
-    left: ListNode,
-    right: ListNode,
+    left: Node,
+    right: Node,
 }
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+                            }
+                        }
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Node::Val(l_v), Node::Val(r_v)) => l_v.cmp(r_v),
+            (Node::List(l_c), Node::List(r_c)) => {
+                for (l, r) in l_c.iter().zip(r_c.iter()) {
+                    match l.cmp(r) {
+                        std::cmp::Ordering::Equal => {} // continue
+                        order => return order,
+                        }
+                    }
+                l_c.len().cmp(&r_c.len())
+                        }
+            (Node::List(l_c), Node::Val(r_v)) => self.cmp(&Node::List(vec![other.clone()])),
+            (Node::Val(l_v), Node::List(r_c)) => Node::List(vec![self.clone()]).cmp(other),
+                    }
+                        }
+                    }
 
 impl Pair {
     fn is_in_order(&self) -> bool {
-        fn helper(left: &Node, right: &Node) -> bool {
-            match left {
-                Node::ListNode(l_c) => match right {
-                    Node::ListNode(r_c) => {
-                        for (l, r) in l_c.children.iter().zip(&r_c.children) {
-                            if helper(l, r) {
-                                return true;
-                            }
-                        }
-                        if l_c.children.len() > r_c.children.len() {
-                            false
-                        } else {
-                            true
-                        }
-                    }
-                    Node::Val(r_v) => {
-                        if helper(&l_c.children[0], &Node::Val(*r_v)) {
-                            true
-                        } else if l_c.children.len() > 1 {
-                            false
-                        } else {
-                            true
-                        }
-                    }
-                },
-                Node::Val(l_v) => match right {
-                    Node::ListNode(r_c) => {
-                        if r_c.children.len() < 1 {
-                            false
-                        } else {
-                            helper(&r_c.children[0], &Node::Val(*l_v))
-                        }
-                    }
-                    Node::Val(r_v) => l_v <= r_v,
-                },
-            }
-        }
-        helper(
-            &Node::ListNode(self.left.clone()),
-            &Node::ListNode(self.right.clone()),
-        )
+        self.left <= self.right
     }
 }
 
@@ -108,25 +91,33 @@ impl FromStr for Pair {
     fn from_str(s: &str) -> anyhow::Result<Self> {
         let mut l = s.lines();
         Ok(Self {
-            left: l.next().unwrap().to_owned().parse::<ListNode>().unwrap(),
-            right: l.next().unwrap().to_owned().parse::<ListNode>().unwrap(),
+            left: l.next().unwrap().to_owned().parse::<Node>().unwrap(),
+            right: l.next().unwrap().to_owned().parse::<Node>().unwrap(),
         })
     }
 }
 
 fn pt1(input: &str) -> usize {
     let pairs = parse(input);
-    println!("{:?}", pairs);
+    for (i, pair) in pairs.iter().enumerate() {
+        println!("{} {}, ", i, pair.is_in_order());
+    }
     pairs
         .iter()
         .enumerate()
-        .filter_map(|(i, p)| if p.is_in_order() { Some(i) } else { None })
+        .filter_map(|(i, p)| if p.is_in_order() { Some(i + 1) } else { None })
         .sum()
 }
 
 fn pt2(input: &str) -> usize {
-    let parsed = parse(input);
-    todo!()
+    let mut pairs = parse_pt2(input);
+    let dividers: Vec<Node> = vec!["[[2]]".parse().unwrap(), "[[6]]".parse().unwrap()];
+    pairs.extend(dividers.clone());
+    pairs
+        .iter()
+        .sorted()
+        .positions(|x| dividers.contains(&x))
+        .fold(1, |acc, x| acc * (x + 1))
 }
 
 fn parse(input: &str) -> Vec<Pair> {
@@ -137,32 +128,41 @@ fn parse(input: &str) -> Vec<Pair> {
         .collect()
 }
 
+fn parse_pt2(input: &str) -> Vec<Node> {
+    input
+        .replace('\r', "")
+        .replace("\n\n", "\n")
+        .lines()
+        .map(|l| l.parse().unwrap())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs::read_to_string;
-    // solution in local not available
-    // #[test]
-    // fn pt1_example() {
-    //     let input = read_to_string(P.example_path("_1")).expect("no such file");
-    //     assert_eq!(pt1(&input), 13);
-    // }
 
-    // #[test]
-    // fn pt1_input() {
-    //     let input = read_to_string(P.input_path()).expect("no such file");
-    //     assert_eq!(pt1(&input), 0);
-    // }
+    #[test]
+    fn pt1_example() {
+        let input = read_to_string(P.example_path("_1")).expect("no such file");
+        assert_eq!(pt1(&input), 13);
+    }
+    
+    #[test]
+    fn pt1_input() {
+        let input = read_to_string(P.input_path()).expect("no such file");
+        assert_eq!(pt1(&input), 6544); // too low 7592 too high
+    }
 
-    // #[test]
-    // fn pt2_example() {
-    //     let input = read_to_string(P.example_path("_1")).expect("no such file");
-    //     assert_eq!(pt2(&input), 0);
-    // }
+    #[test]
+    fn pt2_example() {
+        let input = read_to_string(P.example_path("_1")).expect("no such file");
+        assert_eq!(pt2(&input), 140);
+    }
 
-    // #[test]
-    // fn pt2_input() {
-    //     let input = read_to_string(P.input_path()).expect("no such file");
-    //     assert_eq!(pt2(&input), 0);
-    // }
+    #[test]
+    fn pt2_input() {
+        let input = read_to_string(P.input_path()).expect("no such file");
+        assert_eq!(pt2(&input), 19493);
+    }
 }

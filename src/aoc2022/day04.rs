@@ -1,6 +1,8 @@
 /// problem: https://adventofcode.com/2022/day/4
 /// input: https://adventofcode.com/2022/day/4/input
-use std::str::FromStr;
+use std::{ops::RangeInclusive, str::FromStr};
+
+use itertools::Itertools;
 
 use crate::Problem;
 const P: Problem = Problem {
@@ -9,48 +11,59 @@ const P: Problem = Problem {
     name: "Elf Ranges",
 };
 
-pub struct ElfRange {
-    low: usize,
-    high: usize,
+#[repr(transparent)]
+pub struct ElfRange(RangeInclusive<usize>);
+
+impl ElfRange {
+    fn contains_elfrange(&self, other: &Self) -> bool {
+        // TODO how to auto destructure tuple struct
+        self.0.contains(other.0.start()) && self.0.contains(other.0.end()) // O(1) just checks bounds
+    }
+
+    fn overlaps_elfrange(&self, other: &Self) -> bool {
+        // TODO how to auto destructure tuple struct
+        self.0.contains(other.0.start()) || self.0.contains(other.0.end())
+    }
 }
 
 pub struct Pair {
-    a: ElfRange,
-    b: ElfRange,
+    left: ElfRange,
+    right: ElfRange,
 }
 
 impl Pair {
-    fn is_enveloped(&self) -> bool {
-        (self.a.high <= self.b.high && self.a.low >= self.b.low)
-            || (self.b.high <= self.a.high && self.b.low >= self.a.low)
+    fn is_contained(&self) -> bool {
+        self.left.contains_elfrange(&self.right) || self.right.contains_elfrange(&self.left)
     }
 
     fn is_overlapped(&self) -> bool {
-        !((self.a.low > self.b.high) || (self.b.low > self.a.high))
+        self.left.overlaps_elfrange(&self.right) || self.right.overlaps_elfrange(&self.left)
     }
 }
 impl FromStr for Pair {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> anyhow::Result<Self> {
-        let (a, b) = s.split_once(',').unwrap();
-        let (alow, ahigh) = a.split_once('-').unwrap();
-        let (blow, bhigh) = b.split_once('-').unwrap();
-        let a = ElfRange {
-            low: alow.parse().unwrap(),
-            high: ahigh.parse().unwrap(),
-        };
-        let b = ElfRange {
-            low: blow.parse().unwrap(),
-            high: bhigh.parse().unwrap(),
-        };
+        // 2-4,6-8
+        let (left, right) = s
+            .split(',')
+            .map(|range| {
+                range
+                    .split('-')
+                    .map(|n| n.parse().expect("Should be usize"))
+                    .collect_tuple::<(usize, usize)>()
+                    .map(|(low, high)| ElfRange(low..=high))
+                    .expect("must be 2")
+            })
+            .collect_tuple::<(_, _)>()
+            .expect("must be 2");
 
-        Ok(Pair { a, b })
+        Ok(Pair { left, right })
     }
 }
 
 pub fn part_1_solution(pairs: Vec<Pair>) -> usize {
-    pairs.iter().filter(|&pair| pair.is_enveloped()).count()
+    pairs.iter().filter(|&pair| pair.is_contained()).count()
 }
 pub fn part_2_solution(pairs: Vec<Pair>) -> usize {
     pairs.iter().filter(|&pair| pair.is_overlapped()).count()

@@ -10,18 +10,18 @@ const P: Problem = Problem {
 };
 
 #[derive(Clone, Copy)]
-pub enum RockPaperScissors {
+pub enum Hand {
     Rock,
     Paper,
     Scissors,
 }
 
-impl RockPaperScissors {
+impl Hand {
     pub fn defeats(&self) -> Self {
         match self {
-            RockPaperScissors::Rock => RockPaperScissors::Scissors,
-            RockPaperScissors::Paper => RockPaperScissors::Rock,
-            RockPaperScissors::Scissors => RockPaperScissors::Paper,
+            Hand::Rock => Hand::Scissors,
+            Hand::Paper => Hand::Rock,
+            Hand::Scissors => Hand::Paper,
         }
     }
     pub fn draws(&self) -> Self {
@@ -30,58 +30,47 @@ impl RockPaperScissors {
 
     pub fn loses_to(&self) -> Self {
         match self {
-            RockPaperScissors::Rock => RockPaperScissors::Paper,
-            RockPaperScissors::Paper => RockPaperScissors::Scissors,
-            RockPaperScissors::Scissors => RockPaperScissors::Rock,
+            Hand::Rock => Hand::Paper,
+            Hand::Paper => Hand::Scissors,
+            Hand::Scissors => Hand::Rock,
         }
     }
 }
 
 pub struct Game {
-    p1: RockPaperScissors,
-    p2: RockPaperScissors,
+    p1: Hand,
+    p2: Hand,
 }
 
 impl Game {
-    pub fn eval_p2(&self) -> usize {
+    pub fn evaluate(&self) -> usize {
         // TODO: grid lookup would be better?
-        match self.p2 {
-            RockPaperScissors::Rock => {
-                1 + match self.p1 {
-                    RockPaperScissors::Rock => 3,
-                    RockPaperScissors::Paper => 0,
-                    RockPaperScissors::Scissors => 6,
-                }
-            }
-            RockPaperScissors::Paper => {
-                2 + match self.p1 {
-                    RockPaperScissors::Rock => 6,
-                    RockPaperScissors::Paper => 3,
-                    RockPaperScissors::Scissors => 0,
-                }
-            }
-            RockPaperScissors::Scissors => {
-                3 + match self.p1 {
-                    RockPaperScissors::Rock => 0,
-                    RockPaperScissors::Paper => 6,
-                    RockPaperScissors::Scissors => 3,
-                }
-            }
+        match (self.p2, self.p1) {
+            (Hand::Rock, Hand::Rock) => 1 + 3,
+            (Hand::Rock, Hand::Paper) => 1 + 0,
+            (Hand::Rock, Hand::Scissors) => 1 + 6,
+            (Hand::Paper, Hand::Rock) => 2 + 6,
+            (Hand::Paper, Hand::Paper) => 2 + 3,
+            (Hand::Paper, Hand::Scissors) => 2 + 0,
+            (Hand::Scissors, Hand::Rock) => 3 + 0,
+            (Hand::Scissors, Hand::Paper) => 3 + 6,
+            (Hand::Scissors, Hand::Scissors) => 3 + 3,
         }
     }
 
+    /// TODO: i don't like this 
     pub fn from_str_part1(s: &str) -> anyhow::Result<Self> {
         let (l, r) = s.trim().split_once(' ').expect("should be have space");
         let p1 = match l {
-            "A" => RockPaperScissors::Rock,
-            "B" => RockPaperScissors::Paper,
-            "C" => RockPaperScissors::Scissors,
+            "A" => Hand::Rock,
+            "B" => Hand::Paper,
+            "C" => Hand::Scissors,
             _ => panic!("shouldn't be other char here"),
         };
         let p2 = match r {
-            "X" => RockPaperScissors::Rock,
-            "Y" => RockPaperScissors::Paper,
-            "Z" => RockPaperScissors::Scissors,
+            "X" => Hand::Rock,
+            "Y" => Hand::Paper,
+            "Z" => Hand::Scissors,
             _ => panic!("shouldn't be other char here"),
         };
         Ok(Self { p1, p2 })
@@ -94,9 +83,9 @@ impl FromStr for Game {
     fn from_str(s: &str) -> anyhow::Result<Self> {
         let (l, r) = s.trim().split_once(' ').expect("should be have space");
         let p1 = match l {
-            "A" => RockPaperScissors::Rock,
-            "B" => RockPaperScissors::Paper,
-            "C" => RockPaperScissors::Scissors,
+            "A" => Hand::Rock,
+            "B" => Hand::Paper,
+            "C" => Hand::Scissors,
             _ => panic!("shouldn't be other char here"),
         };
         let p2 = match r {
@@ -110,10 +99,11 @@ impl FromStr for Game {
 }
 
 pub fn part_1_solution(games: Vec<Game>) -> usize {
-    games.iter().map(|g| g.eval_p2()).sum()
+    games.iter().map(|g| g.evaluate()).sum()
 }
+
 pub fn part_2_solution(games: Vec<Game>) -> usize {
-    games.iter().map(|g| g.eval_p2()).sum()
+    games.iter().map(|g| g.evaluate()).sum()
 }
 
 #[cfg(test)]

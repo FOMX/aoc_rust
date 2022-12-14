@@ -1,8 +1,6 @@
 /// problem: https://adventofcode.com/2022/day/1
 /// input: https://adventofcode.com/2022/day/1/input
-use std::ops::Add;
-
-use crate::{Problem, Solution};
+use crate::Problem;
 
 const P: Problem = Problem {
     year: 2022,
@@ -25,18 +23,10 @@ fn pt2(data: &str) -> usize {
 }
 
 fn parse(data: &str) -> Vec<usize> {
-    let mut elves: Vec<usize> = Vec::new();
-    let mut calories = 0;
-    for next_line in data.lines() {
-        if next_line.is_empty() {
-            elves.push(calories);
-            calories = 0;
-            continue;
-        }
-        calories += next_line.parse::<usize>().unwrap();
-    }
-    elves.push(calories);
-    elves
+    data.replace('\r', "")
+        .split("\n\n")
+        .map(|chunk| chunk.lines().map(|l| l.parse::<usize>().unwrap()).sum())
+        .collect()
 }
 
 #[cfg(test)]

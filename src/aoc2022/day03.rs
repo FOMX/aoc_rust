@@ -40,12 +40,10 @@ impl RuckSack {
         }
         doubled_chars
             .iter()
-            .map(|c| {
-                if c.is_uppercase() {
-                    (*c as usize) - ('A' as usize) + 27
-                } else {
-                    (*c as usize) - ('a' as usize) + 1
-                }
+            .map(|c| match c {
+                'a'..='z' => 1 + (*c as u8  - b'a') as usize,
+                'A'..='Z' => 27 + (*c as u8  - b'A') as usize,
+                _ => unreachable!("Shouldn't be a char outside of this range"),
             })
             .sum()
     }
