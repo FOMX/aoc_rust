@@ -5,4 +5,22 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# TODO: add benches
+# [[bench]]
+# harness = false
+
+# [lib]
+# bench = false
+
+# [features]
+# criterion = []
+
+# [dev-dependencies]
+# criterion = "0.4.0"
+# criterion-macro = "0.4.0"
+
 [dependencies]
+anyhow = "1.0.66"
+clap = {version="4.0.29", features=["derive"]}
+itertools = "0.10.5" # permutations and combinations
+thiserror = "1.0.37" # error handling 

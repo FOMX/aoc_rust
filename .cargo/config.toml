@@ -1,0 +1,8 @@
+[alias]
+scaffold = "run --bin scaffold --quiet --release " # positional arguments for day and year follow
+# TODO: download = "run --bin download --quiet --release -- "
+# TODO: benches = "run --bin bench --"
+# TODO: submit = "run --bin submit --"
+
+[build]
+rustflags = ["-A", "unused"]
